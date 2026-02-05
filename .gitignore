@@ -1,0 +1,17 @@
+# 数据库（本地数据，不纳入版本库）
+assets/data.db
+assets/*.db
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# 环境与密钥
+.env
+.env.local
+
+# 可选：若不想把 config 中的密钥提交，可取消下一行注释
+# scripts/config.json

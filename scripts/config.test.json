@@ -1,0 +1,10 @@
+{
+  "OPENAI_API_KEY": "",
+  "OPENAI_BASE_URL": "https://api.openai.com/v1",
+  "OPENAI_MODEL": "gpt-4o",
+  "TEST_MODE": true,
+  "EXTRACT_WORKERS": 1,
+  "ANALYZE_WORKERS": 1,
+  "EXTRACT_LIMIT": 10,
+  "WINDOW_SIZE": 20
+}
