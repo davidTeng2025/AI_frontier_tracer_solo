@@ -48,6 +48,10 @@ bash scripts/list_dimensions.sh
 # 查询指定维度的时间轴（示例）
 bash scripts/timeline.sh "LLM"
 bash scripts/timeline.sh "AI编程/Vibe Coding" 50
+
+# 按时间跨度查询（最近半年 / 指定日期区间）
+bash scripts/timeline.sh "AI编程/Vibe Coding" --months 6
+bash scripts/timeline.sh "LLM" --since 2025-06-01 --until 2025-12-31
 ```
 
 ### 清空数据库

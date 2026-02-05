@@ -31,6 +31,8 @@ def fetch_dimension_timeline(
     db_path: str | Path,
     dimension: str,
     limit: Optional[int] = None,
+    since_ts: Optional[int] = None,
+    until_ts: Optional[int] = None,
 ) -> list[dict[str, Any]]:
     """
     指定技术维度，并按时间顺序（从旧到新）拉取数据，展示技术脉络。
@@ -54,9 +56,15 @@ def fetch_dimension_timeline(
     FROM tech_insights i
     JOIN raw_sources s ON i.source_id = s.source_id
     WHERE i.dimension = ?
-    ORDER BY s.publish_time ASC, i.insight_id ASC
     """
     params: list[Any] = [dimension]
+    if since_ts is not None:
+        sql += " AND s.publish_time >= ?"
+        params.append(since_ts)
+    if until_ts is not None:
+        sql += " AND s.publish_time <= ?"
+        params.append(until_ts)
+    sql += " ORDER BY s.publish_time ASC, i.insight_id ASC"
     if limit is not None:
         sql += " LIMIT ?"
         params.append(int(limit))
@@ -74,6 +82,18 @@ def _fmt_ts(ts: int | None) -> str:
         return _dt.datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M:%S")
     except Exception:  # noqa: BLE001
         return str(ts)
+
+
+def _date_to_start_ts(date_str: str) -> int:
+    """解析 YYYY-MM-DD，返回当日 00:00:00 的时间戳。"""
+    dt = _dt.datetime.strptime(date_str.strip(), "%Y-%m-%d")
+    return int(dt.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+
+
+def _date_to_end_ts(date_str: str) -> int:
+    """解析 YYYY-MM-DD，返回当日 23:59:59 的时间戳。"""
+    dt = _dt.datetime.strptime(date_str.strip(), "%Y-%m-%d")
+    return int(dt.replace(hour=23, minute=59, second=59, microsecond=999999).timestamp())
 
 
 def main() -> None:
@@ -94,6 +114,30 @@ def main() -> None:
         help="要查询的维度名称（例如：AI编程/Vibe Coding）",
     )
     parser.add_argument("--limit", type=int, default=None, help="最多返回多少条（默认不限制）")
+    parser.add_argument(
+        "--months",
+        type=int,
+        default=None,
+        help="仅查询最近 N 个月内的记录（与 --since/--until 同时存在时优先）",
+    )
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=None,
+        help="仅查询最近 N 天内的记录（与 --since/--until 同时存在时优先）",
+    )
+    parser.add_argument(
+        "--since",
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="起始日期（闭区间，含当日 00:00:00）",
+    )
+    parser.add_argument(
+        "--until",
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="结束日期（闭区间，含当日 23:59:59）",
+    )
     args = parser.parse_args()
 
     if args.list_dimensions:
@@ -103,7 +147,28 @@ def main() -> None:
     if not args.dimension:
         raise SystemExit("请提供 --dimension，或使用 --list-dimensions 查看可用维度。")
 
-    items = fetch_dimension_timeline(db_path=args.db, dimension=args.dimension, limit=args.limit)
+    since_ts: Optional[int] = None
+    until_ts: Optional[int] = None
+    now = _dt.datetime.now()
+    if args.months is not None:
+        since_ts = int((now - _dt.timedelta(days=args.months * 30)).timestamp())
+        until_ts = int(now.timestamp())
+    elif args.days is not None:
+        since_ts = int((now - _dt.timedelta(days=args.days)).timestamp())
+        until_ts = int(now.timestamp())
+    else:
+        if args.since is not None:
+            since_ts = _date_to_start_ts(args.since)
+        if args.until is not None:
+            until_ts = _date_to_end_ts(args.until)
+
+    items = fetch_dimension_timeline(
+        db_path=args.db,
+        dimension=args.dimension,
+        limit=args.limit,
+        since_ts=since_ts,
+        until_ts=until_ts,
+    )
     if not items:
         print(f"未找到维度={args.dimension!r} 的记录。")
         return
