@@ -1,7 +1,3 @@
-# 数据库（本地数据，不纳入版本库）
-assets/data.db
-assets/*.db
-
 # Python
 __pycache__/
 *.py[cod]
